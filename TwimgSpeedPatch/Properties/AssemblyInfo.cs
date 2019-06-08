@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("TwimgSpeedPatch")]
-[assembly: AssemblyCopyright("Copyright ©  2019")]
+[assembly: AssemblyCopyright("Copyright (C) by Sokcuri")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
