@@ -18,7 +18,6 @@ namespace TwimgSpeedPatch
         {
             if (IsPatched())
             {
-                MessageBox.Show("이미 패치되었습니다", "알림", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             bool endLF = IsHostFileLFOfEnd();
@@ -28,15 +27,15 @@ namespace TwimgSpeedPatch
                 {
                     w.WriteLine("");
                 }
-                w.WriteLine($"{TwImgNodeIPs[new Random().Next(2)]} {HostName}");
+                w.WriteLine($"{TwImgNodeIPs[new Random().Next(3)]} {HostName}");
             }
+            MessageBox.Show("패치되었습니다", "알림", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         public static void UnPatch()
         {
             if (!IsPatched())
             {
-                MessageBox.Show("제거할 패치가 없습니다", "알림", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -53,8 +52,9 @@ namespace TwimgSpeedPatch
                     }
                 }
             }
-
             File.WriteAllText(HostFileName, contents);
+
+            MessageBox.Show("패치를 제거했습니다", "알림", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         public static void OpenHostFile()
