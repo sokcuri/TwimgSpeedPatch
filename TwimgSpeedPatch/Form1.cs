@@ -35,10 +35,14 @@ namespace TwimgSpeedPatch
             HostFileManager.OpenHostFile();
         }
 
-        private void Label1_Click(object sender, EventArgs e)
+        private void linkLabel1_Click(object sender, EventArgs e)
         {
             Process.Start("https://twitter.com/sokcuri");
         }
 
+        private void LinkLabel2_Click(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            Process.Start("https://github.com/sokcuri/TwimgSpeedPatch");
+        }
     }
 }

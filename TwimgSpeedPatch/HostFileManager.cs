@@ -2,17 +2,66 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using SimpleJSON;
 
 namespace TwimgSpeedPatch
 {
     public static class HostFileManager
     {
         private static readonly string HostFileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers/etc/hosts");
-        private static readonly string[] TwImgNodeIPs = new[] {"23.1.106.237", "184.31.10.237", "151.101.52.159"};
         private static readonly string HostName = "pbs.twimg.com";
+
+        private static JObject TwImgNodeIPs = null;
+
+        public static void Init()
+        {
+            try
+            {
+                WebRequest request =
+                    WebRequest.Create(
+                        "https://raw.githubusercontent.com/sokcuri/TwimgSpeedPatch/master/data/server_ip.json");
+                request.Method = "GET";
+                using (WebResponse response = request.GetResponse())
+                {
+                    using (Stream stream = response.GetResponseStream())
+                    {
+                        StreamReader reader = new StreamReader(stream, Encoding.UTF8);
+                        String responseString = reader.ReadToEnd();
+
+                        try
+                        {
+                            TwImgNodeIPs = JSONDecoder.Decode(responseString);
+                        }
+                        catch (Exception e)
+                        {
+                            MessageBox.Show("JSON Decode를 실패했습니다: " + e.Message, "오류", MessageBoxButtons.OK,
+                                MessageBoxIcon.Error);
+                            Environment.Exit(1);
+                        }
+
+                        for (int i = 0; i < TwImgNodeIPs.Count; i++)
+                        {
+                            if (TwImgNodeIPs[i].StringValue == "")
+                            {
+                                MessageBox.Show($"정상적인 ip가 아닙니다. i: {i}, value: {TwImgNodeIPs[i].StringValue}", "오류", MessageBoxButtons.OK,
+                                    MessageBoxIcon.Error);
+                                Environment.Exit(3);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (WebException ex)
+            {
+                MessageBox.Show("트위터 노드 서버 정보를 가져올 수 없습니다. 인터넷 연결을 확인한 후 다시 시도해주세요: " + ex.Message, "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Environment.Exit(2);
+            }
+            
+        }
 
         public static void Patch()
         {
@@ -27,7 +76,7 @@ namespace TwimgSpeedPatch
                 {
                     w.WriteLine("");
                 }
-                w.WriteLine($"{TwImgNodeIPs[new Random().Next(3)]} {HostName}");
+                w.WriteLine($"{TwImgNodeIPs[new Random().Next(TwImgNodeIPs.Count)].StringValue} {HostName}");
             }
             MessageBox.Show("패치되었습니다", "알림", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
