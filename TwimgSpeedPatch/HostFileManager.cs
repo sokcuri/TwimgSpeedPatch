@@ -154,32 +154,43 @@ namespace TwimgSpeedPatch
             {
                 using (var fs = new FileStream(HostFileName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
                 {
-                    var reader = new StreamReader(fs, Encoding.UTF8);
-                    var writer = new StreamWriter(fs, Encoding.UTF8) { AutoFlush = true, NewLine = "\r\n" };
+                    var reader = new StreamReader(fs, true);
+                    var writer = new StreamWriter(fs, reader.CurrentEncoding) { AutoFlush = true, NewLine = "\r\n" };
 
                     // read hosts
                     var lines = new List<string>();
                     {
+                        bool befMatched = false;
+
                         string line;
                         while ((line = reader.ReadLine()) != null)
-                            lines.Add(line);
-                    }
+                        {
+                            if (befMatched)
+                            {
+                                befMatched = false;
+                                if (string.IsNullOrWhiteSpace(line))
+                                    continue;
+                            }
 
-                    // 기존 항목 제거
-                    int i = 0;
-                    while (i < lines.Count)
-                    {
-                        if (RegPattern.IsMatch(lines[i]))
-                            lines.RemoveAt(i);
-                        else
-                            i++;
+                            if (RegPattern.IsMatch(line))
+                                befMatched = true;
+                            else
+                                lines.Add(line);
+                        }
                     }
 
                     // 추가일 경우 한줄 더 쓰기
                     if (patch)
                     {
-                        lines.Add(null);
+                        if (!string.IsNullOrWhiteSpace(lines[lines.Count - 1]))
+                            lines.Add(null);
+
                         lines.Add($"{newAddr}\t{HostName}");
+                    }
+                    else
+                    {
+                        if (string.IsNullOrWhiteSpace(lines[lines.Count - 1]))
+                            lines.RemoveAt(lines.Count - 1);
                     }
 
                     // 다시 쓰기
