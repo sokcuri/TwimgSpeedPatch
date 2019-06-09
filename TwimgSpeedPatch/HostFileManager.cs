@@ -29,7 +29,7 @@ namespace TwimgSpeedPatch
         private static readonly string HostName = "pbs.twimg.com";
         private static readonly string PbsTestUriFormat = "https://{0}/media/CgAc2lSUMAA30oE.jpg:orig";
 
-        private static readonly Regex RegPattern = new Regex($@"$[^\s\t#].+[\s\t]+{HostName}.*^", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex RegPattern = new Regex($@"^[^\s\t#].+[\s\t]+{HostName.Replace(".", "\\.")}.*$", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public static event Action<int> PingProgressChanged;
 
