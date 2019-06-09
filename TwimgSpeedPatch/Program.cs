@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Net;
 using System.Security.Principal;
 using System.Windows.Forms;
 
@@ -35,6 +36,10 @@ namespace TwimgSpeedPatch
                 }
                 return;
             }
+
+            WebRequest.DefaultWebProxy = null;
+            WebRequest.DefaultCachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.NoCacheNoStore);
+            ServicePointManager.MaxServicePoints = 100;
             
             Application.Run(new Form1());
         }

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -15,7 +16,12 @@ namespace TwimgSpeedPatch
 {
     public static class HostFileManager
     {
+        private const int RangeLastResolved = 365;
+
+        private const int BufferSize      = 40960;
+
         private const int HttpTestTimeout = 10000;
+        private const int HttpTest        = 50;
         private const int PingTimeout     = 1000;
         private const int PingTest        = 50;
 
@@ -23,7 +29,7 @@ namespace TwimgSpeedPatch
         private static readonly string HostName = "pbs.twimg.com";
         private static readonly string PbsTestUriFormat = "https://{0}/media/CgAc2lSUMAA30oE.jpg:orig";
 
-        private static readonly Regex RegPattern = new Regex($@"$[^\s\t#].+[\s\t]+{HostName}\t?^", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex RegPattern = new Regex($@"$[^\s\t#].+[\s\t]+{HostName}.*^", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public static event Action<int> PingProgressChanged;
 
@@ -37,12 +43,12 @@ namespace TwimgSpeedPatch
             return Task.Factory.StartNew(InnerPatch, false);
         }
 
-        [DebuggerDisplay("Addr : {IPAddress} / {TotalMs} ms / failed : {Failed}")]
+        [DebuggerDisplay("Addr : {IPAddress} / {HttpMs} ms / failed : {Failed}")]
         private struct PingResult
         {
             public IPAddress IPAddress;
-            public int       Failed;
-            public long      TotalMs;
+            public bool      Failed;
+            public long      HttpMs;
         }
         private static string GetBestIp()
         {
@@ -50,12 +56,12 @@ namespace TwimgSpeedPatch
             using (var wc = new WebClient())
                 jo = JObject.Parse(wc.DownloadString($"https://www.threatcrowd.org/searchApi/v2/domain/report/?domain={HostName}"));
 
-            var minDate = DateTime.Now.Date.Subtract(TimeSpan.FromDays(365));
+            var minDate = DateTime.Now.Date.Subtract(TimeSpan.FromDays(LastResolvedRange));
 
             var pings = jo["resolutions"]
                 .Where(e => e["last_resolved"].Value<DateTime>() >= minDate)
                 .Select(e => IPAddress.TryParse(e["ip_address"].Value<string>(), out var addr) ? addr : null)
-                .Where(e => e != null)
+                .Where(e => e != null && e.AddressFamily == AddressFamily.InterNetwork)
                 .Select(e => new PingResult { IPAddress = e })
                 .ToArray();
 
@@ -66,34 +72,50 @@ namespace TwimgSpeedPatch
                 () => new Ping(),
                 (index, state, ping) =>
                 {
-                    try
-                    {
-                        var req = (HttpWebRequest)WebRequest.Create(string.Format(PbsTestUriFormat, pings[index].IPAddress));
-                        req.Host = HostName;
-                        req.Timeout = HttpTestTimeout;
-
-                        using (var response = req.GetResponse())
-                        {
-                            if (!response.Headers[HttpResponseHeader.ContentType].StartsWith("image"))
-                                throw new Exception();
-                        }
-                    }
-                    catch
-                    {
-                        pings[index].Failed = PingTest;
-
-                        PingProgressChanged?.Invoke(Interlocked.Increment(ref progress) * 100 / pings.Length);
-                        return ping;
-                    }
+                    var buff = new byte[BufferSize];
+                    int read;
 
                     for (int i = 0; i < PingTest; ++i)
                     {
                         var reply = ping.Send(pings[index].IPAddress, PingTimeout);
-
                         if (reply.Status != IPStatus.Success)
-                            pings[index].Failed++;
-                        else
-                            pings[index].TotalMs += reply.RoundtripTime;
+                        {
+                            pings[index].Failed = true;
+                            PingProgressChanged?.Invoke(Interlocked.Increment(ref progress) * 100 / pings.Length);
+                            return ping;
+                        }
+                    }
+
+                    for (int i = 0; i < HttpTest; ++i)
+                    {
+                        try
+                        {
+                            var req = (HttpWebRequest)WebRequest.Create(string.Format(PbsTestUriFormat, pings[index].IPAddress));
+                            req.Host = HostName;
+                            req.Timeout = HttpTestTimeout;
+                            req.ReadWriteTimeout = HttpTestTimeout;
+
+                            var start = DateTime.Now;
+
+                            using (var response = req.GetResponse())
+                            {
+                                if (!response.Headers[HttpResponseHeader.ContentType].StartsWith("image"))
+                                    throw new Exception();
+
+                                using (var stream = response.GetResponseStream())
+                                {
+                                    while ((read = stream.Read(buff, 0, BufferSize)) > 0);
+                                }
+                            }
+
+                            pings[index].HttpMs += (long)(DateTime.Now - start).TotalMilliseconds;
+                        }
+                        catch
+                        {
+                            pings[index].Failed = true;
+                            PingProgressChanged?.Invoke(Interlocked.Increment(ref progress) * 100 / pings.Length);
+                            return ping;
+                        }
                     }
 
                     PingProgressChanged?.Invoke(Interlocked.Increment(ref progress) * 100 / pings.Length);
@@ -102,12 +124,12 @@ namespace TwimgSpeedPatch
                 e => e.Dispose()
                 );
 
-            if (pings.All(e => e.Failed != 0))
+            pings = pings.Where(e => !e.Failed).OrderBy(e => e.Failed).ThenBy(e => e.HttpMs).ToArray();
+
+            if (pings.Length == 0)
                 throw new Exception("최적의 서버를 찾지 못하였습니다. 잠시 후 다시 시도해주세요.");
 
-            pings = pings.OrderBy(e => e.Failed).ThenBy(e => e.TotalMs).ToArray();
-
-            return pings.OrderBy (e => e.Failed).ThenBy(e => e.TotalMs).First().IPAddress.ToString();
+            return pings[0].IPAddress.ToString();
         }
 
         private static string InnerPatch(object patchObject)
