@@ -38,7 +38,10 @@ namespace TwimgSpeedPatch
                 {
                     string errMsg;
                     if (task.IsCompleted)
-                        errMsg = task.Result ?? "패치되었습니다";
+                        if (task.Result == null)
+                            errMsg = "오류가 발생하였습니다!\n\n" + task.Result;
+                        else
+                            errMsg = "패치되었습니다.\n브라우저 혹은 클라이언트를 재실행 해주세요!";
                     else
                         errMsg = "알 수 없는 오류가 발생하였습니다.";
 
