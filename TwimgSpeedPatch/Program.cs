@@ -35,8 +35,7 @@ namespace TwimgSpeedPatch
                 }
                 return;
             }
-
-            HostFileManager.Init();
+            
             Application.Run(new Form1());
         }
     }

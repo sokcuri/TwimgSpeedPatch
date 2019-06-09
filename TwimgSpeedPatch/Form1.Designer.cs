@@ -32,11 +32,11 @@
             this.patchButton = new System.Windows.Forms.Button();
             this.unpatchButton = new System.Windows.Forms.Button();
             this.openHostFile = new System.Windows.Forms.Button();
+            this.label1 = new System.Windows.Forms.Label();
             this.linkLabel1 = new System.Windows.Forms.LinkLabel();
             this.linkLabel2 = new System.Windows.Forms.LinkLabel();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.progress = new TwimgSpeedPatch.FlatProgressBar();
-            this.linkLabel2 = new System.Windows.Forms.LinkLabel();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.SuspendLayout();
             // 
@@ -109,7 +109,6 @@
             this.linkLabel1.TabIndex = 7;
             this.linkLabel1.TabStop = true;
             this.linkLabel1.Text = "https://twitter.com/sokcuri";
-            this.linkLabel1.Click += new System.EventHandler(this.linkLabel1_Click);
             // 
             // linkLabel2
             // 
@@ -179,7 +178,9 @@
         private System.Windows.Forms.Button openHostFile;
         private System.Windows.Forms.LinkLabel linkLabel1;
         private System.Windows.Forms.LinkLabel linkLabel2;
+        private System.Windows.Forms.Label label1;
         private FlatProgressBar progress;
+        private System.Windows.Forms.PictureBox pictureBox1;
     }
 }
 
