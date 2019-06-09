@@ -56,7 +56,7 @@ namespace TwimgSpeedPatch
             using (var wc = new WebClient())
                 jo = JObject.Parse(wc.DownloadString($"https://www.threatcrowd.org/searchApi/v2/domain/report/?domain={HostName}"));
 
-            var minDate = DateTime.Now.Date.Subtract(TimeSpan.FromDays(LastResolvedRange));
+            var minDate = DateTime.Now.Date.Subtract(TimeSpan.FromDays(RangeLastResolved));
 
             var pings = jo["resolutions"]
                 .Where(e => e["last_resolved"].Value<DateTime>() >= minDate)
